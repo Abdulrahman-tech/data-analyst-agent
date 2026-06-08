@@ -5,6 +5,7 @@
 
 import os
 import json
+import logging
 import requests
 from dotenv import load_dotenv
 
@@ -13,9 +14,19 @@ from tools import run_code
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "llama-3.3-70b-versatile"
+
+# ── Constants ─────────────────────────────────────────────────────────────────
+MAX_RETRIES = 3
+LLM_TIMEOUT = 30          # seconds per Groq request
+MAX_OUTPUT_CHARS = 3000   # truncate code output before sending to interpreter
+
+# Safe libraries the LLM is allowed to use in generated code
+SAFE_LIBRARIES = "pandas, matplotlib, numpy, seaborn"
 
 
 # ── LLM helper ────────────────────────────────────────────────────────────────
@@ -23,8 +34,11 @@ MODEL = "llama-3.3-70b-versatile"
 def call_llm(system: str, user: str, temperature: float = 0.1) -> str:
     """
     Call Groq's OpenAI-compatible endpoint.
-    Raises on HTTP error so the executor can catch and handle it.
+    Raises on HTTP error so the caller can handle it cleanly.
     """
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY is not set. Please add it to your environment variables.")
+
     resp = requests.post(
         GROQ_URL,
         headers={
@@ -40,8 +54,15 @@ def call_llm(system: str, user: str, temperature: float = 0.1) -> str:
                 {"role": "user",   "content": user},
             ],
         },
-        timeout=30,
+        timeout=LLM_TIMEOUT,
     )
+
+    # Surface rate limit errors clearly
+    if resp.status_code == 429:
+        raise requests.exceptions.HTTPError(
+            "Groq rate limit reached. Please wait a moment and try again.", response=resp
+        )
+
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
 
@@ -60,10 +81,7 @@ def extract_code(raw: str) -> str:
 # ── Node 1: Parser ────────────────────────────────────────────────────────────
 
 def node_parser(state: AgentState) -> AgentState:
-    """
-    Understand what the user is asking for.
-    Output: one-sentence intent description.
-    """
+    """Understand what the user is asking for. Output: one-sentence intent."""
     reply = call_llm(
         system=(
             "You are a data analysis query parser. "
@@ -79,16 +97,14 @@ def node_parser(state: AgentState) -> AgentState:
     )
     state.intent = reply
     state.steps_log.append({"node": "parser", "status": "done", "intent": reply})
+    logger.info(f"Parser → intent: {reply[:100]}")
     return state
 
 
 # ── Node 2: Planner ───────────────────────────────────────────────────────────
 
 def node_planner(state: AgentState) -> AgentState:
-    """
-    Break the analysis into 3-5 ordered steps.
-    Output: list of step strings.
-    """
+    """Break the analysis into 3-5 ordered steps."""
     reply = call_llm(
         system=(
             "You are a data analysis planner. "
@@ -113,6 +129,7 @@ def node_planner(state: AgentState) -> AgentState:
 
     state.plan = plan
     state.steps_log.append({"node": "planner", "status": "done", "plan": plan})
+    logger.info(f"Planner → {len(plan)} steps")
     return state
 
 
@@ -121,7 +138,7 @@ def node_planner(state: AgentState) -> AgentState:
 def node_codegen(state: AgentState) -> AgentState:
     """
     Write executable Python code for the analysis.
-    On retries, the previous error is included so the LLM can fix it.
+    On retries, the previous error is fed back so the LLM can fix it.
     """
     error_context = ""
     if state.error:
@@ -136,12 +153,14 @@ def node_codegen(state: AgentState) -> AgentState:
         system=(
             "You are a Python data analyst. Write executable pandas/matplotlib code.\n\n"
             "Rules:\n"
+            f"- Only use these libraries: {SAFE_LIBRARIES} — import no others\n"
             "- The DataFrame is pre-loaded as `df` — do NOT load files\n"
             "- Use print() to show results\n"
             "- For charts: use plt.style.use('dark_background') for dark theme, "
             "  do NOT call plt.show() — just build the figure\n"
             "- Add chart titles and axis labels\n"
             "- Handle NaN/missing values gracefully\n"
+            "- Keep output concise — avoid printing the entire DataFrame\n"
             "- Reply with ONLY the Python code. No markdown, no explanation."
         ),
         user=(
@@ -159,6 +178,7 @@ def node_codegen(state: AgentState) -> AgentState:
         "code": state.code,
         "retry": state.retry_count,
     })
+    logger.info(f"CodeGen → {len(state.code)} chars (retry={state.retry_count})")
     return state
 
 
@@ -167,15 +187,15 @@ def node_codegen(state: AgentState) -> AgentState:
 def node_executor(state: AgentState, df) -> AgentState:
     """
     Run the generated code.
-    If it fails and we haven't hit the retry limit, sets should_retry=True
-    which sends the pipeline back to node_codegen.
+    If it fails and we haven't hit the retry limit, sets should_retry=True.
     """
     output, chart_b64, error = run_code(state.code, df)
 
     if error:
         state.error = error
         state.retry_count += 1
-        state.should_retry = state.retry_count < 3
+        state.should_retry = state.retry_count < MAX_RETRIES
+        logger.warning(f"Executor error (retry {state.retry_count}/{MAX_RETRIES}): {error[:200]}")
         state.steps_log.append({
             "node": "executor",
             "status": "error",
@@ -183,14 +203,20 @@ def node_executor(state: AgentState, df) -> AgentState:
             "retry_count": state.retry_count,
         })
     else:
-        state.code_output = output
+        # Truncate very long output before storing — saves tokens in interpreter call
+        truncated_output = output[:MAX_OUTPUT_CHARS]
+        if len(output) > MAX_OUTPUT_CHARS:
+            truncated_output += f"\n... (output truncated at {MAX_OUTPUT_CHARS} chars)"
+
+        state.code_output = truncated_output
         state.chart_b64 = chart_b64
         state.error = None
         state.should_retry = False
+        logger.info(f"Executor success → output={len(output)} chars, chart={'yes' if chart_b64 else 'no'}")
         state.steps_log.append({
             "node": "executor",
             "status": "done",
-            "output": output,
+            "output": truncated_output,
             "has_chart": chart_b64 is not None,
         })
 
@@ -200,10 +226,7 @@ def node_executor(state: AgentState, df) -> AgentState:
 # ── Node 5: Interpreter ───────────────────────────────────────────────────────
 
 def node_interpreter(state: AgentState) -> AgentState:
-    """
-    Read the code output and write plain-English insights.
-    This is what the user actually reads.
-    """
+    """Read the code output and write plain-English insights."""
     reply = call_llm(
         system=(
             "You are a data analyst writing a clear summary for a business user.\n\n"
@@ -222,6 +245,7 @@ def node_interpreter(state: AgentState) -> AgentState:
     )
     state.insights = reply
     state.steps_log.append({"node": "interpreter", "status": "done", "insights": reply})
+    logger.info("Interpreter → insights generated")
     return state
 
 
@@ -234,12 +258,10 @@ def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
 
     Flow:
         parser → planner → codegen → executor
-                                ↑         │ error & retry_count < 3
+                                ↑         │ error & retry_count < MAX_RETRIES
                                 └─────────┘
                             executor (success) → interpreter → done
     """
-    import pandas as pd
-
     state = AgentState(
         user_query=user_query,
         dataset_json=dataset_json,
@@ -279,11 +301,12 @@ def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
                     "retry_count": state.retry_count,
                 }
                 if not state.should_retry:
-                    # Max retries hit — give up
-                    yield {"type": "error", "message": "Max retries reached. The agent could not produce working code."}
+                    yield {
+                        "type": "error",
+                        "message": f"The agent could not produce working code after {MAX_RETRIES} attempts. Please try rephrasing your question."
+                    }
                     return
-                # Loop back to codegen
-                continue
+                continue  # Loop back to codegen
 
             # Success
             yield {
@@ -301,8 +324,24 @@ def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
 
         yield {"type": "done"}
 
+    except ValueError as e:
+        # Missing API key or config error
+        logger.error(f"Config error: {e}")
+        yield {"type": "error", "message": str(e)}
+
+    except requests.exceptions.Timeout:
+        logger.error("Groq API timed out")
+        yield {"type": "error", "message": "The AI service timed out. Please try again."}
+
     except requests.exceptions.HTTPError as e:
-        yield {"type": "error", "message": f"Groq API error: {str(e)}"}
+        logger.error(f"Groq HTTP error: {e}")
+        yield {"type": "error", "message": f"AI service error: {str(e)}"}
+
+    except requests.exceptions.ConnectionError:
+        logger.error("Could not connect to Groq API")
+        yield {"type": "error", "message": "Could not connect to the AI service. Please check your internet connection."}
+
     except Exception as e:
         import traceback
-        yield {"type": "error", "message": f"Agent error: {traceback.format_exc()[:500]}"}
+        logger.error(f"Unexpected agent error: {traceback.format_exc()}")
+        yield {"type": "error", "message": "An unexpected error occurred. Please try again."}
