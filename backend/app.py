@@ -27,7 +27,7 @@ DATASETS: dict[str, pd.DataFrame] = {}
 # ── CORS (allow React dev server on port 5173) ────────────────────────────────
 @app.after_request
 def add_cors(response):
-    response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response.headers["Access-Control-Allow-Origin"] = os.environ.get("FRONTEND_URL", "*")
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
@@ -123,4 +123,4 @@ def health():
 if __name__ == "__main__":
     print("Starting Data Analyst Agent backend on http://localhost:5000")
     print("Make sure GROQ_API_KEY is set in backend/.env")
-    app.run(debug=True, port=5001, threaded=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), threaded=True)
