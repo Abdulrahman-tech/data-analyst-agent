@@ -90,7 +90,7 @@ export default function App() {
     setMessages(prev => [...prev, { role: 'agent', blocks: [] }])
 
     try {
-      const res = await fetch('/analyze', {
+      const res = await fetch((import.meta.env.VITE_API_URL || '') + '/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q, dataset_id: dataset.dataset_id }),
