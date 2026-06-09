@@ -39,6 +39,8 @@ DATASETS: dict[str, pd.DataFrame] = {}
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "*")
+if FRONTEND_URL and not FRONTEND_URL.startswith("http"):
+    FRONTEND_URL = "https://" + FRONTEND_URL
 
 @app.after_request
 def add_cors(response):
