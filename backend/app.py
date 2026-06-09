@@ -32,9 +32,11 @@ MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", 10))
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 MAX_DATASETS = int(os.environ.get("MAX_DATASETS", 100))  # evict oldest after this
 
-# In-memory dataset store: session_id → DataFrame
-# For a production app you'd use Redis or a tmp file, but this works well here
-DATASETS: dict[str, pd.DataFrame] = {}
+# File-based dataset store: session_id → parquet file in /tmp
+# Survives server restarts unlike in-memory dict
+import pathlib
+DATASETS_DIR = pathlib.Path("/tmp/datasets")
+DATASETS_DIR.mkdir(exist_ok=True)
 
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -57,11 +59,12 @@ def options():
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def evict_oldest_datasets():
-    """Keep memory usage bounded by removing oldest entries when limit is hit."""
-    while len(DATASETS) >= MAX_DATASETS:
-        oldest_key = next(iter(DATASETS))
-        del DATASETS[oldest_key]
-        logger.info(f"Evicted dataset {oldest_key} (limit={MAX_DATASETS})")
+    """Keep file count bounded by removing oldest files when limit is hit."""
+    files = sorted(DATASETS_DIR.glob("*.parquet"), key=lambda f: f.stat().st_mtime)
+    while len(files) >= MAX_DATASETS:
+        files[0].unlink()
+        logger.info(f"Evicted dataset {files[0].stem} (limit={MAX_DATASETS})")
+        files = files[1:]
 
 
 # ── Upload endpoint ───────────────────────────────────────────────────────────
@@ -105,7 +108,7 @@ def upload():
     # ── Store ─────────────────────────────────────────────────────────────────
     evict_oldest_datasets()
     dataset_id = str(uuid.uuid4())[:8]
-    DATASETS[dataset_id] = df
+    df.to_parquet(DATASETS_DIR / f"{dataset_id}.parquet")
 
     logger.info(f"Uploaded '{filename}' → dataset_id={dataset_id} shape={df.shape}")
 
@@ -140,12 +143,13 @@ def analyze():
     if len(query) > 1000:
         return jsonify({"error": "Query too long. Please keep it under 1000 characters."}), 400
 
-    if not dataset_id or dataset_id not in DATASETS:
+    dataset_path = DATASETS_DIR / f"{dataset_id}.parquet"
+    if not dataset_id or not dataset_path.exists():
         return jsonify({
             "error": "Dataset not found. The server may have restarted — please re-upload your file."
         }), 404
 
-    df = DATASETS[dataset_id]
+    df = pd.read_parquet(dataset_path)
     dataset_info = get_dataset_info(df)
     dataset_json = df.to_json()
 
@@ -175,7 +179,7 @@ def health():
     groq_key_set = bool(os.environ.get("GROQ_API_KEY"))
     return jsonify({
         "status": "ok",
-        "datasets_loaded": len(DATASETS),
+        "datasets_loaded": len(list(DATASETS_DIR.glob("*.parquet"))),
         "groq_key_configured": groq_key_set,
         "max_file_size_mb": MAX_FILE_SIZE_MB,
     })
