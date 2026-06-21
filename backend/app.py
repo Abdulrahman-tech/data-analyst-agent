@@ -158,7 +158,7 @@ def analyze():
     def generate():
         try:
             for event in run_graph(query, dataset_json, dataset_info, df):
-                yield f"data: {json.dumps(event)}\n\n"
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"Streaming error: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': 'An unexpected server error occurred.'})}\n\n"

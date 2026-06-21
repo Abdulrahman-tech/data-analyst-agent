@@ -19,7 +19,7 @@ class AgentState:
     plan: List[str] = field(default_factory=list)  # Planner → ordered steps
     code: str = ""                # CodeGen → Python code to execute
     code_output: str = ""         # Executor → printed output from the code
-    chart_b64: Optional[str] = None  # Executor → base64 PNG if chart was made
+    chart_html: Optional[str] = None  # Executor → Plotly HTML if chart was made
     error: Optional[str] = None   # Executor → traceback if code failed
     retry_count: int = 0          # How many times we've retried code generation
     insights: str = ""            # Interpreter → plain-English explanation

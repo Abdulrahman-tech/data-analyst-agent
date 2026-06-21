@@ -59,7 +59,7 @@ export default function App() {
       if (node === 'codegen')     pushBlock({ type: 'code',   code: event.code, retry: event.retry })
       if (node === 'executor') {
         if (event.output)    pushBlock({ type: 'output', text: event.output })
-        if (event.chart_b64) pushBlock({ type: 'chart',  b64: event.chart_b64 })
+        if (event.chart_html) pushBlock({ type: 'chart', html: event.chart_html })
       }
       if (node === 'interpreter') pushBlock({ type: 'insights', text: event.insights })
     }

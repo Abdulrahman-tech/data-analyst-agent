@@ -194,13 +194,19 @@ function Block({ block }) {
             background: 'var(--surface2)',
             border: '1px solid var(--border)',
             borderRadius: '10px',
-            padding: '12px',
             overflow: 'hidden',
           }}>
-            <img
-              src={`/charts/${block.filename}`}
-              alt="Analysis chart"
-              style={{ width: '100%', borderRadius: '6px', display: 'block' }}
+            <iframe
+              srcDoc={block.html}
+              style={{
+                width: '100%',
+                height: '450px',
+                border: 'none',
+                borderRadius: '10px',
+                display: 'block',
+              }}
+              sandbox="allow-scripts"
+              title="Interactive Chart"
             />
           </div>
         </div>

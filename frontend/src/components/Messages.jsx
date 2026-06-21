@@ -142,12 +142,19 @@ function Block({ block }) {
           <Divider label="CHART" />
           <div style={{
             background: 'var(--surface2)', border: '1px solid var(--border)',
-            borderRadius: 10, padding: 12, overflow: 'hidden',
+            borderRadius: 10, overflow: 'hidden',
           }}>
-            <img
-              src={`data:image/png;base64,${block.b64}`}
-              alt="Generated chart"
-              style={{ width: '100%', borderRadius: 6, display: 'block' }}
+            <iframe
+              srcDoc={block.html}
+              style={{
+                width: '100%',
+                height: 450,
+                border: 'none',
+                borderRadius: 10,
+                display: 'block',
+              }}
+              sandbox="allow-scripts"
+              title="Interactive Chart"
             />
           </div>
         </div>
