@@ -28,7 +28,24 @@ Query Parser → Planner → Code Generator → Executor → Interpreter
 | **Interpreter** | Translates results into plain-English insights with actionable recommendations |
 
 ---
+## Live Demo
+[Your Railway URL here]
 
+## LangSmith Traces
+[Paste a trace URL from smith.langchain.com]
+
+## What's New
+- Interactive Plotly charts (zoom, hover, dark theme)
+- Conditional charts — only generated when explicitly requested
+- LangSmith observability tracing on all 5 pipeline nodes
+- Isolated sandbox execution for generated code
+
+## Stack
+- Backend: Flask + Groq (llama-3.3-70b)
+- Pipeline: 5-node hand-rolled agent (Parser → Planner → CodeGen → Executor → Interpreter)
+- Charts: Plotly via isolated subprocess sandbox
+- Observability: LangSmith
+- Deployment: Railway (backend) + Vercel (frontend)
 ## Tech stack
 
 | Layer | Technology |
