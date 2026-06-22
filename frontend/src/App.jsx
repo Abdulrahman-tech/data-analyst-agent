@@ -16,6 +16,7 @@ import Messages from './components/Messages.jsx'
 const INITIAL_NODES = {
   parser: 'idle', planner: 'idle', codegen: 'idle',
   executor: 'idle', interpreter: 'idle',
+  suggester: 'idle', detector: 'idle',
 }
 
 // Which node activates after each node completes

@@ -5,11 +5,13 @@
 //   3. Sample queries to try
 
 const NODES = [
-  { id: 'parser',      label: 'Query Parser'  },
-  { id: 'planner',     label: 'Planner'       },
-  { id: 'codegen',     label: 'Code Generator'},
-  { id: 'executor',    label: 'Executor'      },
-  { id: 'interpreter', label: 'Interpreter'   },
+  { id: 'parser',      label: 'Query Parser'     },
+  { id: 'planner',     label: 'Planner'           },
+  { id: 'codegen',     label: 'Code Generator'    },
+  { id: 'executor',    label: 'Executor'          },
+  { id: 'interpreter', label: 'Interpreter'       },
+  { id: 'suggester',   label: 'Suggester'         },
+  { id: 'detector',    label: 'Pattern Detector'  },
 ]
 
 const SAMPLES = [
