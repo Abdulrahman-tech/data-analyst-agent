@@ -229,6 +229,37 @@ function Block({ block }) {
         </div>
       )
 
+    case 'suggestions':
+      return (
+        <div>
+          <Divider label="SUGGESTED QUESTIONS" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {block.items.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => window.dispatchEvent(new CustomEvent('suggestion', { detail: q }))}
+                style={{
+                  background: 'rgba(124,106,247,0.06)',
+                  border: '1px solid rgba(124,106,247,0.2)',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  color: 'var(--text2)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'var(--sans)',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => e.target.style.background = 'rgba(124,106,247,0.15)'}
+                onMouseLeave={e => e.target.style.background = 'rgba(124,106,247,0.06)'}
+              >
+                <span style={{ color: 'var(--accent)', marginRight: '8px' }}>→</span>{q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+
     default:
       return null
   }

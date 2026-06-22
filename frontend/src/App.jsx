@@ -8,7 +8,7 @@
 //   query       → current textarea value
 //   running     → true while the agent is streaming
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import FileUpload from './components/FileUpload.jsx'
 import Messages from './components/Messages.jsx'
@@ -31,6 +31,16 @@ export default function App() {
   const [query,      setQuery]      = useState('')
   const [running,    setRunning]    = useState(false)
   const textareaRef = useRef()
+
+  // ── Handle suggestion clicks ────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      setQuery(e.detail)
+      textareaRef.current?.focus()
+    }
+    window.addEventListener('suggestion', handler)
+    return () => window.removeEventListener('suggestion', handler)
+  }, [])
 
   // ── Append a block to the last agent message ────────────────────────────
   function pushBlock(block) {
@@ -62,6 +72,7 @@ export default function App() {
         if (event.chart_html) pushBlock({ type: 'chart', html: event.chart_html })
       }
       if (node === 'interpreter') pushBlock({ type: 'insights', text: event.insights })
+      if (node === 'suggester' && event.suggestions?.length) pushBlock({ type: 'suggestions', items: event.suggestions })
     }
 
     if (type === 'node_error') {
@@ -141,10 +152,19 @@ export default function App() {
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '255px 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '255px 1fr',
       gridTemplateRows: '52px 1fr',
       height: '100vh',
     }}>
@@ -156,6 +176,17 @@ export default function App() {
         borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12,
       }}>
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text)',
+              fontSize: 20, cursor: 'pointer', padding: '4px 8px',
+            }}
+          >
+            ☰
+          </button>
+        )}
         <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.5px' }}>
           data<span style={{ color: 'var(--accent2)' }}>analyst</span>.agent
         </span>
@@ -186,13 +217,25 @@ export default function App() {
         </div>
       </header>
 
-      {/* Sidebar */}
-      <Sidebar
-        nodeStates={nodeStates}
-        dataset={dataset}
-        onSample={q => { setQuery(q); textareaRef.current?.focus() }}
-        onReset={handleReset}
-      />
+      {/* Sidebar — hidden on mobile unless toggled */}
+      {(!isMobile || sidebarOpen) && (
+        <div style={{
+          position: isMobile ? 'fixed' : 'relative',
+          top: isMobile ? 52 : 'auto',
+          left: 0,
+          zIndex: isMobile ? 100 : 'auto',
+          width: isMobile ? '255px' : 'auto',
+          height: isMobile ? 'calc(100vh - 52px)' : 'auto',
+          boxShadow: isMobile ? '4px 0 20px rgba(0,0,0,0.5)' : 'none',
+        }}>
+          <Sidebar
+            nodeStates={nodeStates}
+            dataset={dataset}
+            onSample={q => { setQuery(q); textareaRef.current?.focus(); setSidebarOpen(false) }}
+            onReset={handleReset}
+          />
+        </div>
+      )}
 
       {/* Main */}
       <main style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

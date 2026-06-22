@@ -218,6 +218,49 @@ def node_interpreter(state: AgentState) -> AgentState:
     return state
 
 
+@traceable(name="6. Suggester")
+def node_suggester(state: AgentState) -> AgentState:
+    """Generate 3 follow-up questions based on the insights and analysis."""
+    reply = call_llm(
+        system=(
+            "You are a data analyst assistant. Based on the analysis just performed, "
+            "suggest exactly 3 short follow-up questions the user could ask next.\n\n"
+            "Rules:\n"
+            "- Each question must be specific to the dataset columns and findings\n"
+            "- Keep each question under 10 words\n"
+            "- Make them progressively deeper — surface, then trend, then action\n"
+            "- Reply with ONLY a JSON array of 3 strings. Example:\n"
+            '  [\"Which region has the highest revenue?\", \"How did sales trend over time?\", \"Which category has best profit margin?\"]\n'
+            "- No preamble, no explanation, just the JSON array."
+        ),
+        user=(
+            f"Dataset columns: {state.dataset_info.splitlines()[0]}\n\n"
+            f"Analysis performed: {state.intent}\n\n"
+            f"Key insights: {state.insights}"
+        ),
+        temperature=0.4,
+    )
+
+    try:
+        import json as _json
+        # Strip markdown fences if present
+        clean = reply.strip()
+        if clean.startswith("```"):
+            lines = clean.split("\n")
+            clean = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        suggestions = _json.loads(clean.strip())
+        if not isinstance(suggestions, list):
+            suggestions = []
+        suggestions = [s for s in suggestions if isinstance(s, str)][:3]
+    except Exception:
+        suggestions = []
+
+    state.suggestions = suggestions
+    state.steps_log.append({"node": "suggester", "status": "done", "suggestions": suggestions})
+    logger.info(f"Suggester → {len(suggestions)} suggestions")
+    return state
+
+
 def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
     state = AgentState(
         user_query=user_query,
@@ -272,6 +315,11 @@ def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
         yield {"type": "node_start", "node": "interpreter"}
         state = node_interpreter(state)
         yield {"type": "node_done", "node": "interpreter", "insights": state.insights}
+
+        # ── Suggester ────────────────────────────────────────────────────
+        yield {"type": "node_start", "node": "suggester"}
+        state = node_suggester(state)
+        yield {"type": "node_done", "node": "suggester", "suggestions": state.suggestions}
 
         yield {"type": "done"}
 
