@@ -73,6 +73,7 @@ export default function App() {
       }
       if (node === 'interpreter') pushBlock({ type: 'insights', text: event.insights })
       if (node === 'suggester' && event.suggestions?.length) pushBlock({ type: 'suggestions', items: event.suggestions })
+      if (node === 'detector' && event.patterns?.length) pushBlock({ type: 'patterns', items: event.patterns })
     }
 
     if (type === 'node_error') {

@@ -24,6 +24,7 @@ class AgentState:
     retry_count: int = 0          # How many times we've retried code generation
     insights: str = ""            # Interpreter → plain-English explanation
     suggestions: list = None         # Suggester → follow-up questions
+    patterns: list = None            # Detector → proactive anomalies/trends
 
     # ── Routing flag ────────────────────────────────────────────────────
     should_retry: bool = False    # Set by executor; read by the router

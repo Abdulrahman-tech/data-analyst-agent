@@ -175,6 +175,44 @@ function Block({ block }) {
         </div>
       )
 
+    case 'patterns':
+      return (
+        <div>
+          <Divider label="PATTERNS DETECTED" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {block.items.map((p, i) => (
+              <div key={i} style={{
+                background: 'rgba(245,158,11,0.06)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+              }}>
+                <div style={{ fontSize: '12px', color: 'var(--amber)', marginBottom: '6px' }}>
+                  ⚠ {p.alert}
+                </div>
+                {p.question && (
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('suggestion', { detail: p.question }))}
+                    style={{
+                      background: 'rgba(245,158,11,0.08)',
+                      border: '1px solid rgba(245,158,11,0.2)',
+                      borderRadius: '6px',
+                      padding: '5px 10px',
+                      fontSize: '11px',
+                      color: 'var(--amber)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--sans)',
+                    }}
+                  >
+                    → {p.question}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
     case 'suggestions':
       return (
         <div>

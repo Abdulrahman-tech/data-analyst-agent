@@ -261,6 +261,51 @@ def node_suggester(state: AgentState) -> AgentState:
     return state
 
 
+@traceable(name="7. Pattern Detector")
+def node_detector(state: AgentState) -> AgentState:
+    """Proactively scan the data for anomalies, trends, or unusual patterns."""
+    reply = call_llm(
+        system=(
+            "You are a proactive data analyst. Given a dataset description and recent analysis, "
+            "scan for anomalies, unusual patterns, or interesting trends the user did NOT ask about.\n\n"
+            "Rules:\n"
+            "- Find 1-2 genuinely interesting patterns or anomalies\n"
+            "- Each pattern must be specific with actual numbers from the data\n"
+            "- Frame each as a short alert with a follow-up question\n"
+            "- Only flag things that are genuinely surprising or actionable\n"
+            "- If nothing unusual exists, return an empty array\n"
+            "- Reply with ONLY a JSON array. Example:\n"
+            '  [{"alert": "Revenue dropped 40% in March vs February", "question": "Investigate the March drop?"}]\n'
+            "- No preamble, no explanation, just the JSON array."
+        ),
+        user=(
+            f"Dataset info:\n{state.dataset_info}\n\n"
+            f"Analysis performed: {state.intent}\n\n"
+            f"Code output:\n{state.code_output}\n\n"
+            f"Insights: {state.insights}"
+        ),
+        temperature=0.2,
+    )
+
+    try:
+        import json as _json
+        clean = reply.strip()
+        if clean.startswith("```"):
+            lines = clean.split("\n")
+            clean = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        patterns = _json.loads(clean.strip())
+        if not isinstance(patterns, list):
+            patterns = []
+        patterns = [p for p in patterns if isinstance(p, dict) and "alert" in p][:2]
+    except Exception:
+        patterns = []
+
+    state.patterns = patterns
+    state.steps_log.append({"node": "detector", "status": "done", "patterns": patterns})
+    logger.info(f"Detector → {len(patterns)} patterns found")
+    return state
+
+
 def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
     state = AgentState(
         user_query=user_query,
@@ -320,6 +365,11 @@ def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
         yield {"type": "node_start", "node": "suggester"}
         state = node_suggester(state)
         yield {"type": "node_done", "node": "suggester", "suggestions": state.suggestions}
+
+        # ── Pattern Detector ─────────────────────────────────────────────
+        yield {"type": "node_start", "node": "detector"}
+        state = node_detector(state)
+        yield {"type": "node_done", "node": "detector", "patterns": state.patterns}
 
         yield {"type": "done"}
 
