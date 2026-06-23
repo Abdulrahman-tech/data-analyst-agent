@@ -26,6 +26,9 @@ class AgentState:
     suggestions: list = None         # Suggester → follow-up questions
     patterns: list = None            # Detector → proactive anomalies/trends
 
+    # ── Conversation memory ─────────────────────────────────────────────
+    history: List[dict] = field(default_factory=list)  # Past Q&A pairs
+
     # ── Routing flag ────────────────────────────────────────────────────
     should_retry: bool = False    # Set by executor; read by the router
 

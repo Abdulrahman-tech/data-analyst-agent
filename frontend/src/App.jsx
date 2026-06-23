@@ -31,7 +31,9 @@ export default function App() {
   const [nodeStates, setNodeStates] = useState(INITIAL_NODES)
   const [query,      setQuery]      = useState('')
   const [running,    setRunning]    = useState(false)
+  const [history,    setHistory]    = useState([])  // conversation memory
   const textareaRef = useRef()
+  const currentQuery = useRef('')  // track query for history
 
   // ── Handle suggestion clicks ────────────────────────────────────────
   useEffect(() => {
@@ -72,7 +74,10 @@ export default function App() {
         if (event.output)    pushBlock({ type: 'output', text: event.output })
         if (event.chart_html) pushBlock({ type: 'chart', html: event.chart_html })
       }
-      if (node === 'interpreter') pushBlock({ type: 'insights', text: event.insights })
+      if (node === 'interpreter') {
+        pushBlock({ type: 'insights', text: event.insights })
+        setHistory(prev => [...prev, { query: currentQuery.current, insights: event.insights }])
+      }
       if (node === 'suggester' && event.suggestions?.length) pushBlock({ type: 'suggestions', items: event.suggestions })
       if (node === 'detector' && event.patterns?.length) pushBlock({ type: 'patterns', items: event.patterns })
     }
@@ -92,6 +97,7 @@ export default function App() {
     const q = query.trim()
     if (!q || running || !dataset) return
 
+    currentQuery.current = q
     setQuery('')
     textareaRef.current.style.height = 'auto'
     setRunning(true)
@@ -106,7 +112,7 @@ export default function App() {
       const res = await fetch((import.meta.env.VITE_API_URL || '') + '/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, dataset_id: dataset.dataset_id }),
+        body: JSON.stringify({ query: q, dataset_id: dataset.dataset_id, history }),
       })
 
       if (!res.ok) {
@@ -151,6 +157,7 @@ export default function App() {
     setDataset(null)
     setMessages([])
     setNodeStates(INITIAL_NODES)
+    setHistory([])
   }
 
   // ── Render ──────────────────────────────────────────────────────────────

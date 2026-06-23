@@ -80,7 +80,13 @@ def node_parser(state: AgentState) -> AgentState:
         ),
         user=(
             f"Dataset info:\n{state.dataset_info}\n\n"
-            f'User question: "{state.user_query}"'
+            + (
+                "Previous analysis in this session:\n" +
+                "\n".join([f"Q: {h['query']}\nA: {h['insights']}" for h in state.history[-3:]]) +
+                "\n\n"
+                if state.history else ""
+            )
+            + f'User question: "{state.user_query}"'
         ),
     )
     state.intent = reply
@@ -208,7 +214,13 @@ def node_interpreter(state: AgentState) -> AgentState:
         ),
         user=(
             f'Original question: "{state.user_query}"\n\n'
-            f"Code output:\n{state.code_output}"
+            + (
+                "Context from earlier in this session:\n" +
+                "\n".join([f"Q: {h['query']}\nA: {h['insights']}" for h in state.history[-2:]]) +
+                "\n\n"
+                if state.history else ""
+            )
+            + f"Code output:\n{state.code_output}"
         ),
         temperature=0.3,
     )
@@ -306,11 +318,12 @@ def node_detector(state: AgentState) -> AgentState:
     return state
 
 
-def run_graph(user_query: str, dataset_json: str, dataset_info: str, df):
+def run_graph(user_query: str, dataset_json: str, dataset_info: str, df, history: list = None):
     state = AgentState(
         user_query=user_query,
         dataset_json=dataset_json,
         dataset_info=dataset_info,
+        history=history or [],
     )
     try:
         yield {"type": "node_start", "node": "parser"}

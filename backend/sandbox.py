@@ -4,6 +4,10 @@ import json
 import traceback
 import pandas as pd
 import numpy as np
+try:
+    import statsmodels.api as sm
+except ImportError:
+    sm = None
 
 
 def main():
@@ -24,6 +28,7 @@ def main():
         "pd": pd,
         "np": np,
         "df": df,
+        "sm": sm,
     }
 
     try:

@@ -10,3 +10,4 @@ gunicorn==23.0.0
 pyarrow==16.1.0
 plotly
 langsmith
+statsmodels

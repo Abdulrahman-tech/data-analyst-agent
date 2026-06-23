@@ -135,6 +135,7 @@ def analyze():
 
     query = body.get("query", "").strip()
     dataset_id = body.get("dataset_id", "").strip()
+    history = body.get("history", [])
 
     # ── Input validation ──────────────────────────────────────────────────────
     if not query:
@@ -152,12 +153,14 @@ def analyze():
     df = pd.read_parquet(dataset_path)
     dataset_info = get_dataset_info(df)
     dataset_json = df.to_json()
+    # Keep last 3 exchanges only to save tokens
+    history = history[-3:] if len(history) > 3 else history
 
     logger.info(f"Analyze request: dataset_id={dataset_id} query='{query[:80]}'")
 
     def generate():
         try:
-            for event in run_graph(query, dataset_json, dataset_info, df):
+            for event in run_graph(query, dataset_json, dataset_info, df, history):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"Streaming error: {e}")
