@@ -153,9 +153,11 @@ def run_all_evals():
 
     # ── CI gate ───────────────────────────────────────────────────────────────
     # If all failures are rate limit errors, skip CI gate
-    rate_limit_failures = sum(1 for s in scores if not s["passed"] and ("rate limit" in s.get("reason", "").lower() or "rate limit" in s.get("reason", "")))
-    if rate_limit_failures == total - passed:
-        print(f"\n⚠️  CI SKIPPED: all failures due to rate limits — not a regression")
+    # Skip CI gate if all failures are infrastructure errors (rate limits etc)
+    infra_keywords = ["rate limit", "timed out", "connection", "service error"]
+    infra_failures = sum(1 for s in scores if not s["passed"] and any(kw in s.get("reason", "").lower() for kw in infra_keywords))
+    if infra_failures >= (total - passed) and passed == 0:
+        print(f"\n⚠️  CI SKIPPED: all {infra_failures} failures are infrastructure errors — not a regression")
         sys.exit(0)
 
     MIN_PASS_RATE = 70.0
