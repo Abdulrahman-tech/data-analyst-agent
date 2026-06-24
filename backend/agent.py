@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from langsmith import traceable
 
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.sqlite import SqliteSaver
 from state import AgentState
 from tools import run_code
 
@@ -330,7 +331,12 @@ def build_graph():
     workflow.add_edge("node_suggester",   "node_detector")
     workflow.add_edge("node_detector",    END)
 
-    return workflow.compile()
+    # SqliteSaver persists state so pipeline survives crashes
+    import os, sqlite3
+    db_path = os.path.join(os.environ.get("TMPDIR", "/tmp"), "agent_checkpoints.db")
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    memory = SqliteSaver(conn)
+    return workflow.compile(checkpointer=memory)
 
 
 # ── Graph runner (yields SSE dicts) ──────────────────────────────────────────
@@ -359,7 +365,11 @@ def run_graph(user_query: str, dataset_json: str, dataset_info: str, df, history
     try:
         prev_nodes = set()
 
-        for chunk in graph.stream(initial_state, stream_mode="updates"):
+        import uuid
+        thread_id = str(uuid.uuid4())
+        config = {"configurable": {"thread_id": thread_id}}
+
+        for chunk in graph.stream(initial_state, config, stream_mode="updates"):
             for node_name, node_state in chunk.items():
                 clean_name = node_name.replace("node_", "")
 
