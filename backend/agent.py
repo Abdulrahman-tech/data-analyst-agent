@@ -11,8 +11,6 @@ from dotenv import load_dotenv
 from langsmith import traceable
 
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
-
 from state import AgentState
 from tools import run_code
 
