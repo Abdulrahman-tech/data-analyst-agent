@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-06-24T22:28:49.576119",
+  "pass_rate": 70.0,
+  "passed": 7,
+  "total": 10,
+  "scores": [
+    {
+      "id": "eval_001",
+      "query": "What is the total revenue?",
+      "difficulty": "easy",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_002",
+      "query": "Which category has the highest revenue?",
+      "difficulty": "easy",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_003",
+      "query": "What is the average revenue per category?",
+      "difficulty": "easy",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_004",
+      "query": "Which month had the highest total revenue?",
+      "difficulty": "easy",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_005",
+      "query": "Are there any missing values?",
+      "difficulty": "easy",
+      "passed": false,
+      "score": 0.0,
+      "reason": "Missing: ['no null']"
+    },
+    {
+      "id": "eval_006",
+      "query": "What is the total revenue by region?",
+      "difficulty": "medium",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_007",
+      "query": "Which region has the highest average revenue?",
+      "difficulty": "medium",
+      "passed": false,
+      "score": 0.0,
+      "reason": "Missing: ['85,600', '85600']"
+    },
+    {
+      "id": "eval_008",
+      "query": "What is the correlation between revenue and units sold?",
+      "difficulty": "medium",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_009",
+      "query": "What is the total units sold by category?",
+      "difficulty": "medium",
+      "passed": true,
+      "score": 1.0,
+      "reason": "All checks passed"
+    },
+    {
+      "id": "eval_010",
+      "query": "What is the revenue trend over months?",
+      "difficulty": "medium",
+      "passed": false,
+      "reason": "Error: AI service error: Groq rate limit reached. Please wait a moment and try again.",
+      "score": 0.0
+    }
+  ]
+}

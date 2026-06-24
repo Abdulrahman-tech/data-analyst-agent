@@ -1,0 +1,128 @@
+[
+  {
+    "id": "eval_001",
+    "query": "What is the total revenue?",
+    "expected_contains": [
+      "1,582,500",
+      "1582500"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_002",
+    "query": "Which category has the highest revenue?",
+    "expected_contains": [
+      "Electronics",
+      "880,500"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_003",
+    "query": "What is the average revenue per category?",
+    "expected_contains": [
+      "Electronics",
+      "Clothing",
+      "Food"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_004",
+    "query": "Which month had the highest total revenue?",
+    "expected_contains": [
+      "December",
+      "Dec",
+      "190,000",
+      "190000"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_005",
+    "query": "Are there any missing values?",
+    "expected_contains": [
+      "0",
+      "missing"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "eval_006",
+    "query": "What is the total revenue by region?",
+    "expected_contains": [
+      "North",
+      "South",
+      "East",
+      "West"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_007",
+    "query": "Which region has the highest average revenue?",
+    "expected_contains": [
+      "West"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_008",
+    "query": "What is the correlation between revenue and units sold?",
+    "expected_contains": [
+      "correlation",
+      "-0.4",
+      "negative"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_009",
+    "query": "What is the total units sold by category?",
+    "expected_contains": [
+      "Electronics",
+      "Clothing",
+      "Food"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "eval_010",
+    "query": "What is the revenue trend over months?",
+    "expected_contains": [
+      "month",
+      "revenue"
+    ],
+    "expected_not_contains": [
+      "error"
+    ],
+    "difficulty": "medium"
+  }
+]
