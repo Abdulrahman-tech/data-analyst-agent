@@ -12,8 +12,8 @@ export default function FileUpload({ onUploaded }) {
 
   async function handleFile(file) {
     if (!file) return
-    if (!file.name.match(/\.(csv|json)$/i)) {
-      setError('Only .csv and .json files are supported.')
+    if (!file.name.match(/\.(csv|json|xlsx|xls)$/i)) {
+      setError('Only .csv, .json, and .xlsx files are supported.')
       return
     }
 
@@ -43,7 +43,7 @@ export default function FileUpload({ onUploaded }) {
           Data Analyst Agent
         </div>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text3)', lineHeight: 1.7 }}>
-          Upload a CSV or JSON file, then ask anything in plain English.<br/>
+          Upload a CSV, JSON, or Excel file, then ask anything in plain English.<br/>
           The agent plans, writes code, executes it, and explains the results.
         </div>
       </div>
@@ -70,12 +70,12 @@ export default function FileUpload({ onUploaded }) {
           {uploading ? 'Uploading...' : 'Drop file here or click to browse'}
         </div>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text3)' }}>
-          .csv or .json
+          .csv, .json or .xlsx
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,.json"
+          accept=".csv,.json,.xlsx,.xls"
           style={{ display: 'none' }}
           onChange={e => handleFile(e.target.files[0])}
         />
