@@ -1,36 +1,34 @@
 # state.py
-# The AgentState is the single object that flows through every node.
-# Each node reads from it and adds its own output to it.
-# This is the manual equivalent of LangGraph's TypedDict state.
+# LangGraph state using TypedDict.
+# Each node reads from and writes to this shared state object.
 
-from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import TypedDict, Optional, List, Annotated
+import operator
 
 
-@dataclass
-class AgentState:
+class AgentState(TypedDict):
     # ── Input ──────────────────────────────────────────────────────────
-    user_query: str = ""          # Raw question from user
-    dataset_json: str = ""        # Full dataset serialised to JSON
-    dataset_info: str = ""        # Human-readable description for the LLM
+    user_query: str
+    dataset_json: str
+    dataset_info: str
 
-    # ── Node outputs (filled as the graph runs) ─────────────────────────
-    intent: str = ""              # Parser  → one-sentence summary of the query
-    plan: List[str] = field(default_factory=list)  # Planner → ordered steps
-    code: str = ""                # CodeGen → Python code to execute
-    code_output: str = ""         # Executor → printed output from the code
-    chart_html: Optional[str] = None  # Executor → Plotly HTML if chart was made
-    error: Optional[str] = None   # Executor → traceback if code failed
-    retry_count: int = 0          # How many times we've retried code generation
-    insights: str = ""            # Interpreter → plain-English explanation
-    suggestions: list = None         # Suggester → follow-up questions
-    patterns: list = None            # Detector → proactive anomalies/trends
+    # ── Node outputs ────────────────────────────────────────────────────
+    intent: str
+    plan: List[str]
+    code: str
+    code_output: str
+    chart_html: Optional[str]
+    error: Optional[str]
+    retry_count: int
+    insights: str
+    suggestions: Optional[list]
+    patterns: Optional[list]
 
     # ── Conversation memory ─────────────────────────────────────────────
-    history: List[dict] = field(default_factory=list)  # Past Q&A pairs
+    history: List[dict]
 
     # ── Routing flag ────────────────────────────────────────────────────
-    should_retry: bool = False    # Set by executor; read by the router
+    should_retry: bool
 
-    # ── Step log (streamed to the frontend) ─────────────────────────────
-    steps_log: List[dict] = field(default_factory=list)
+    # ── Step log ────────────────────────────────────────────────────────
+    steps_log: List[dict]

@@ -14,3 +14,4 @@ statsmodels
 openpyxl
 reportlab
 reportlab
+langgraph
