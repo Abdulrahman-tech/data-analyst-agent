@@ -80,8 +80,8 @@ def upload():
     file = request.files["file"]
     filename = file.filename or ""
 
-    if not filename.endswith((".csv", ".json")):
-        return jsonify({"error": "Only CSV and JSON files are supported"}), 400
+    if not filename.endswith((".csv", ".json", ".xlsx", ".xls")):
+        return jsonify({"error": "Only CSV, JSON, and Excel files are supported"}), 400
 
     raw = file.read()
 
@@ -95,6 +95,8 @@ def upload():
     try:
         if filename.endswith(".json"):
             df = pd.read_json(io.BytesIO(raw))
+        elif filename.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(io.BytesIO(raw))
         else:
             df = pd.read_csv(io.BytesIO(raw))
     except Exception as e:
@@ -174,6 +176,36 @@ def analyze():
             "X-Accel-Buffering": "no",  # Tells nginx/Railway not to buffer SSE
         },
     )
+
+
+# ── PDF Report endpoint ──────────────────────────────────────────────────────
+@app.route("/report", methods=["POST"])
+def generate_report():
+    """
+    Accepts session data and returns a PDF report.
+    """
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"error": "JSON body required"}), 400
+
+    try:
+        from pdf_report import build_pdf
+        pdf_bytes = build_pdf(body)
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": "attachment; filename=analysis-report.pdf",
+                "Access-Control-Allow-Origin": FRONTEND_URL,
+            }
+        )
+    except Exception as e:
+        logger.error(f"PDF generation error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/report", methods=["OPTIONS"])
+def report_options():
+    return "", 204
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ export default defineConfig({
       '/upload':  'http://localhost:5001',
       '/analyze': 'http://localhost:5001',
       '/health':  'http://localhost:5001',
+      '/report':  'http://localhost:5001',
     }
   }
 })

@@ -32,6 +32,8 @@ export default function App() {
   const [query,      setQuery]      = useState('')
   const [running,    setRunning]    = useState(false)
   const [history,    setHistory]    = useState([])  // conversation memory
+  const [exchanges,  setExchanges]  = useState([])  // full exchanges for PDF
+  const currentExchange = useRef({})  // building current exchange
   const textareaRef = useRef()
   const currentQuery = useRef('')  // track query for history
 
@@ -67,19 +69,28 @@ export default function App() {
     if (type === 'node_done') {
       setNodeStates(prev => ({ ...prev, [node]: 'done' }))
 
-      if (node === 'parser')      pushBlock({ type: 'intent', text: event.intent })
+      if (node === 'parser') {
+        pushBlock({ type: 'intent', text: event.intent })
+        currentExchange.current = { query: currentQuery.current, intent: event.intent }
+      }
       if (node === 'planner')     pushBlock({ type: 'plan',   steps: event.plan })
       if (node === 'codegen')     pushBlock({ type: 'code',   code: event.code, retry: event.retry })
       if (node === 'executor') {
         if (event.output)    pushBlock({ type: 'output', text: event.output })
         if (event.chart_html) pushBlock({ type: 'chart', html: event.chart_html })
+        currentExchange.current.output = event.output
       }
       if (node === 'interpreter') {
         pushBlock({ type: 'insights', text: event.insights })
+        currentExchange.current.insights = event.insights
         setHistory(prev => [...prev, { query: currentQuery.current, insights: event.insights }])
       }
       if (node === 'suggester' && event.suggestions?.length) pushBlock({ type: 'suggestions', items: event.suggestions })
-      if (node === 'detector' && event.patterns?.length) pushBlock({ type: 'patterns', items: event.patterns })
+      if (node === 'detector') {
+        if (event.patterns?.length) pushBlock({ type: 'patterns', items: event.patterns })
+        currentExchange.current.patterns = event.patterns || []
+        setExchanges(prev => [...prev, { ...currentExchange.current }])
+      }
     }
 
     if (type === 'node_error') {
@@ -158,6 +169,7 @@ export default function App() {
     setMessages([])
     setNodeStates(INITIAL_NODES)
     setHistory([])
+    setExchanges([])
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -214,6 +226,41 @@ export default function App() {
             }}>
               agent running…
             </span>
+          )}
+          {exchanges.length > 0 && !running && (
+            <button
+              onClick={async () => {
+                const res = await fetch((import.meta.env.VITE_API_URL || '') + '/report', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    filename: dataset?.filename || 'dataset',
+                    exchanges,
+                  }),
+                })
+                if (res.ok) {
+                  const blob = await res.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = 'analysis-report.pdf'
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }
+              }}
+              style={{
+                background: 'rgba(124,106,247,0.15)',
+                border: '1px solid rgba(124,106,247,0.4)',
+                color: 'var(--accent2)',
+                fontFamily: 'var(--mono)',
+                fontSize: 10,
+                padding: '4px 12px',
+                borderRadius: 6,
+                cursor: 'pointer',
+              }}
+            >
+              ↓ Export PDF
+            </button>
           )}
           <span style={{
             fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--teal)',
