@@ -153,7 +153,7 @@ def run_all_evals():
 
     # ── CI gate ───────────────────────────────────────────────────────────────
     # If all failures are rate limit errors, skip CI gate
-    rate_limit_failures = sum(1 for s in scores if not s["passed"] and "rate limit" in s.get("reason", "").lower())
+    rate_limit_failures = sum(1 for s in scores if not s["passed"] and ("rate limit" in s.get("reason", "").lower() or "rate limit" in s.get("reason", "")))
     if rate_limit_failures == total - passed:
         print(f"\n⚠️  CI SKIPPED: all failures due to rate limits — not a regression")
         sys.exit(0)
